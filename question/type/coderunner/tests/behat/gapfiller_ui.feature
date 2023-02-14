@@ -20,12 +20,9 @@ Feature: Test the GapFiller_UI
     And the following "questions" exist:
       | questioncategory | qtype      | name         | template |
       | Test questions   | coderunner | Print answer | printans |
-    And I log in as "teacher1"
-    And I am on "Course 1" course homepage
-    And I navigate to "Question bank" in current page administration
 
   Scenario: Edit a CodeRunner printans question into a gap-filler question
-    When I choose "Edit question" action for "Print answer" in the question bank
+    When I am on the "Print answer" "core_question > edit" page logged in as teacher1
     And I set the following fields to these values:
       | customise      | 1                             |
       | id_template    | print('{{ STUDENT_ANSWER }}') |
@@ -47,7 +44,6 @@ Feature: Test the GapFiller_UI
     And I press "id_submitbutton"
     Then I should not see "Failed 1 test(s)"
     And I should see "Created by"
-    And I should see "Last modified by"
 
     When I choose "Edit question" action for "Print answer" in the question bank
     And I set the field "id_globalextra" to:
@@ -80,10 +76,8 @@ for element in answer: print(element)
     And I press "id_submitbutton"
     Then I should not see "Failed 1 test(s)"
     And I should see "Created by"
-    And I should see "Last modified by"
 
     When I choose "Preview" action for "Print answer" in the question bank
-    And I switch to "questionpreview" window
     And I set the field "cr_gapfiller_field" to:
      """
      Line 1
@@ -93,7 +87,7 @@ for element in answer: print(element)
     Then I should see "Passed all tests!"
 
   Scenario: Edit and run a gap-filler question using test0 as a source.
-    When I choose "Edit question" action for "Print answer" in the question bank
+    When I am on the "Print answer" "core_question > edit" page logged in as teacher1
     And I set the following fields to these values:
       | customise               | 1                             |
       | id_template             | print({{ STUDENT_ANSWER }}[0])|
@@ -120,7 +114,6 @@ for element in answer: print(element)
     And I should see "Created by"
 
     When I choose "Preview" action for "Print answer" in the question bank
-    And I switch to "questionpreview" window
     And I set the field "cr_gapfiller_field" to "not a bubble"
     And I press "Check"
     Then I should not see "Passed all tests!"

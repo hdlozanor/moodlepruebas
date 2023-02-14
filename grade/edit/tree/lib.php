@@ -57,7 +57,7 @@ class grade_edit_tree {
     /**
      * Constructor
      */
-    public function __construct($gtree, $moving=false, $gpr) {
+    public function __construct($gtree, $moving, $gpr) {
         global $USER, $OUTPUT, $COURSE;
 
         $systemdefault = get_config('moodle', 'grade_report_showcalculations');
@@ -129,7 +129,6 @@ class grade_edit_tree {
         $actionsmenu = new action_menu();
         $actionsmenu->set_menu_trigger(get_string('edit'));
         $actionsmenu->set_owner_selector('grade-item-' . $eid);
-        $actionsmenu->set_alignment(action_menu::TL, action_menu::BL);
 
         if (!$is_category_item && ($icon = $this->gtree->get_edit_icon($element, $this->gpr, true))) {
             $actionsmenu->add($icon);

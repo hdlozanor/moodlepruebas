@@ -60,7 +60,7 @@ Feature: We can use Single view
   @javascript
   Scenario: I can update grades, add feedback and exclude grades.
     Given I navigate to "View > Single view" in the course gradebook
-    And I select "Student" from the "Select user..." singleselect
+    And I select "Student" from the "View all the grades of a single user" singleselect
     And I set the field "Override for Test assignment one" to "1"
     When I set the following fields to these values:
         | Grade for Test assignment one | 10.00 |
@@ -68,14 +68,12 @@ Feature: We can use Single view
     And I set the field "Exclude for Test assignment four" to "1"
     And I press "Save"
     Then I should see "Grades were set for 2 items"
-    And I press "Continue"
     And the field "Exclude for Test assignment four" matches value "1"
     And the field "Grade for Test assignment one" matches value "10.00"
     And I set the following fields to these values:
         | Test grade item | 45 |
     And I press "Save"
     Then I should see "Grades were set for 1 items"
-    And I press "Continue"
     And the field "Grade for Test grade item" matches value "45.00"
     And the field "Grade for Course total" matches value "55.00"
     And I click on "Show grades for Test assignment three" "link"
@@ -86,14 +84,12 @@ Feature: We can use Single view
     And I set the field "Exclude for Jane, Nina, Niamh, Cholmondely" to "1"
     And I press "Save"
     Then I should see "Grades were set for 2 items"
-    And I press "Continue"
     And the field "Grade for Ann, Jill, Grainne, Beauchamp" matches value "12.05"
     And the field "Exclude for Jane, Nina, Niamh, Cholmondely" matches value "1"
-    And I select "new grade item 1" from the "Select grade item..." singleselect
+    And I select "new grade item 1" from the "View a single grade item" singleselect
     And I set the field "Grade for Ann, Jill, Grainne, Beauchamp" to "Very good"
     And I press "Save"
     Then I should see "Grades were set for 1 items"
-    And I press "Continue"
     And the following should exist in the "generaltable" table:
         | First name (Alternate name) Surname | Grade |
         | Ann, Jill, Grainne, Beauchamp | Very good |
@@ -101,7 +97,7 @@ Feature: We can use Single view
     And I log in as "teacher2"
     And I am on "Course 1" course homepage
     Given I navigate to "View > Single view" in the course gradebook
-    And I select "Student" from the "Select user..." singleselect
+    And I select "Student" from the "View all the grades of a single user" singleselect
     And the "Exclude for Test assignment one" "checkbox" should be disabled
     And the "Override for Test assignment one" "checkbox" should be enabled
 
@@ -120,6 +116,24 @@ Feature: We can use Single view
     And I set the field "Perform bulk insert" to "1"
     And I press "Save"
     Then I should see "Grades were set for 6 items"
+
+  Scenario: I can bulk update grades with custom decimal separator
+    Given the following "language customisations" exist:
+      | component       | stringid | value |
+      | core_langconfig | decsep   | #     |
+    And I follow "Single view for Ann, Jill, Grainne, Beauchamp"
+    And I should see "Gronya,Beecham"
+    When I set the field "For" to "All grades"
+    And I set the field "Insert value" to "1#25"
+    And I set the field "Perform bulk insert" to "1"
+    And I press "Save"
+    Then I should see "Grades were set for 6 items"
+    # Custome scale, cast to int
+    And the field "Grade for new grade item 1" matches value "Disappointing"
+    # Value grade, float with custom decsep.
+    And the field "Grade for Test assignment one" matches value "1#25"
+    # Numerical scale, cast to int, showing as float with custom decsep.
+    And the field "Grade for Test grade item" matches value "1#00"
 
   Scenario: Navigation works in the Single view.
     Given I follow "Single view for Ann, Jill, Grainne, Beauchamp"

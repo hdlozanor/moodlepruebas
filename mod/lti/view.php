@@ -72,8 +72,10 @@ if (empty($typeid) && ($tool = lti_get_tool_by_url_match($lti->toolurl))) {
 }
 if ($typeid) {
     $toolconfig = lti_get_type_config($typeid);
+    $toolurl = $toolconfig['toolurl'];
 } else {
     $toolconfig = array();
+    $toolurl = $lti->toolurl;
 }
 
 $PAGE->set_cm($cm, $course); // Set's up global $COURSE.
@@ -106,17 +108,17 @@ $pagetitle = strip_tags($course->shortname.': '.format_string($lti->name));
 $PAGE->set_title($pagetitle);
 $PAGE->set_heading($course->fullname);
 
+$activityheader = $PAGE->activityheader;
+if (!$lti->showtitlelaunch) {
+    $header['title'] = '';
+}
+if (!$lti->showdescriptionlaunch) {
+    $header['description'] = '';
+}
+$activityheader->set_attrs($header ?? []);
+
 // Print the page header.
 echo $OUTPUT->header();
-
-if ($lti->showtitlelaunch) {
-    // Print the main part of the page.
-    echo $OUTPUT->heading(format_string($lti->name, true, array('context' => $context)));
-}
-
-if ($lti->showdescriptionlaunch && $lti->intro) {
-    echo $OUTPUT->box(format_module_intro('lti', $lti, $cm->id), 'generalbox description', 'intro');
-}
 
 if ($typeid) {
     $config = lti_get_type_type_config($typeid);
@@ -145,11 +147,11 @@ if (($launchcontainer == LTI_LAUNCH_CONTAINER_WINDOW) &&
         $content = lti_initiate_login($cm->course, $id, $lti, $config);
     }
 
-    // Build the allowed URL, since we know what it will be from $lti->toolurl,
-    // If the specified toolurl is invalid the iframe won't load, but we still want to avoid parse related errors here.
-    // So we set an empty default allowed url, and only build a real one if the parse is successful.
+    // Build the allowed URL, since we know what it will be from $toolurl.
+    // If the specified URL is invalid, the iframe won't load, but we still want to avoid parse related errors here.
+    // So we set an empty default allowed URL, and only build a real one if the parse is successful.
     $ltiallow = '';
-    $urlparts = parse_url($lti->toolurl);
+    $urlparts = parse_url($toolurl);
     if ($urlparts && array_key_exists('scheme', $urlparts) && array_key_exists('host', $urlparts)) {
         $ltiallow = $urlparts['scheme'] . '://' . $urlparts['host'];
         // If a port has been specified we append that too.

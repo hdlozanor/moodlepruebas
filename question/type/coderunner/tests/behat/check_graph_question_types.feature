@@ -17,9 +17,7 @@ Feature: Check that the directed and undirected graph question types work.
     And the following "question categories" exist:
       | contextlevel | reference | name           |
       | Course       | C1        | Test questions |
-    And I log in as "teacher1"
-    And I am on "Course 1" course homepage
-    And I navigate to "Question bank" in current page administration
+    And I am on the "Course 1" "core_question > course question bank" page logged in as teacher1
 
   Scenario: Preview a coderunner directed graph question
     When I disable UI plugins
@@ -32,7 +30,6 @@ Feature: Check that the directed and undirected graph question types work.
       | id_answer         | {"edgeGeometry":[{"lineAngleAdjust":0,"parallelPart":0.5,"perpendicularPart":0}],"nodeGeometry":[[246,163],[426,160]],"nodes":[["A",false],["B",false]],"edges":[[0,1,"wt"]]}|
     And I enable UI plugins
     And I choose "Preview" action for "Test 2-node directed graph" in the question bank
-    And I switch to "questionpreview" window
     Then I should see a canvas
     And I press "Fill in correct responses"
     And I press "Check"
@@ -49,7 +46,6 @@ Feature: Check that the directed and undirected graph question types work.
       | id_answer         | {"edgeGeometry":[{"lineAngleAdjust":0,"parallelPart":0.5,"perpendicularPart":0}],"nodeGeometry":[[246,163],[426,160]],"nodes":[["A",false],["B",false]],"edges":[[0,1,"wt"]]}|
     And I enable UI plugins
     And I choose "Preview" action for "Test 2-node undirected graph" in the question bank
-    And I switch to "questionpreview" window
     And I press "Fill in correct responses"
     And I press "Check"
     Then I should see "Passed all tests!"

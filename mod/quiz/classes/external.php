@@ -131,9 +131,12 @@ class mod_quiz_external extends external_api {
                                                     'reviewspecificfeedback', 'reviewgeneralfeedback', 'reviewrightanswer',
                                                     'reviewoverallfeedback', 'questionsperpage', 'navmethod',
                                                     'browsersecurity', 'delay1', 'delay2', 'showuserpicture', 'showblocks',
-                                                    'completionattemptsexhausted', 'completionpass', 'overduehandling',
+                                                    'completionattemptsexhausted', 'overduehandling',
                                                     'graceperiod', 'canredoquestions', 'allowofflineattempts');
                         $viewablefields = array_merge($viewablefields, $additionalfields);
+
+                        // Any course module fields that previously existed in quiz.
+                        $quizdetails['completionpass'] = $quizobj->get_cm()->completionpassgrade;
                     }
 
                     // Fields only for managers.
@@ -463,6 +466,8 @@ class mod_quiz_external extends external_api {
                 'timecheckstate' => new external_value(PARAM_INT, 'Next time quiz cron should check attempt for
                                                         state changes.  NULL means never check.', VALUE_OPTIONAL),
                 'sumgrades' => new external_value(PARAM_FLOAT, 'Total marks for this attempt.', VALUE_OPTIONAL),
+                'gradednotificationsenttime' => new external_value(PARAM_INT,
+                    'Time when the student was notified that manual grading of their attempt was complete.', VALUE_OPTIONAL),
             )
         );
     }
@@ -506,7 +511,8 @@ class mod_quiz_external extends external_api {
      * @since Moodle 3.1
      */
     public static function get_user_best_grade($quizid, $userid = 0) {
-        global $DB, $USER;
+        global $DB, $USER, $CFG;
+        require_once($CFG->libdir . '/gradelib.php');
 
         $warnings = array();
 
@@ -556,6 +562,17 @@ class mod_quiz_external extends external_api {
             $result['hasgrade'] = true;
             $result['grade'] = $grade;
         }
+
+        // Inform user of the grade to pass if non-zero.
+        $gradinginfo = grade_get_grades($course->id, 'mod', 'quiz', $quiz->id, $user->id);
+        if (!empty($gradinginfo->items)) {
+            $item = $gradinginfo->items[0];
+
+            if ($item && grade_floats_different($item->gradepass, 0)) {
+                $result['gradetopass'] = $item->gradepass;
+            }
+        }
+
         $result['warnings'] = $warnings;
         return $result;
     }
@@ -571,6 +588,7 @@ class mod_quiz_external extends external_api {
             array(
                 'hasgrade' => new external_value(PARAM_BOOL, 'Whether the user has a grade on the given quiz.'),
                 'grade' => new external_value(PARAM_FLOAT, 'The grade (only if the user has a grade).', VALUE_OPTIONAL),
+                'gradetopass' => new external_value(PARAM_FLOAT, 'The grade to pass the quiz (only if set).', VALUE_OPTIONAL),
                 'warnings' => new external_warnings(),
             )
         );
@@ -1008,8 +1026,9 @@ class mod_quiz_external extends external_api {
             if ($displayoptions->marks >= question_display_options::MARK_AND_MAX) {
                 $question['mark'] = $attemptobj->get_question_mark($slot);
             }
-
-            $questions[] = $question;
+            if ($attemptobj->check_page_access($attemptobj->get_question_page($slot), false)) {
+                $questions[] = $question;
+            }
         }
         return $questions;
     }

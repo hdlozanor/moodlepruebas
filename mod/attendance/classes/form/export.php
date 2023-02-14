@@ -24,8 +24,6 @@
 
 namespace mod_attendance\form;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * class for displaying export form.
  *
@@ -50,7 +48,7 @@ class export extends \moodleform {
 
         $groupmode = groups_get_activity_groupmode($cm, $course);
         $groups = groups_get_activity_allowed_groups($cm, $USER->id);
-        if ($groupmode == VISIBLEGROUPS or has_capability('moodle/site:accessallgroups', $modcontext)) {
+        if ($groupmode == VISIBLEGROUPS || has_capability('moodle/site:accessallgroups', $modcontext)) {
             $grouplist[0] = get_string('allparticipants');
         }
         if ($groups) {
@@ -60,7 +58,9 @@ class export extends \moodleform {
         }
 
         // Restrict the export to the selected users.
-        $namefields = get_all_user_name_fields(true, 'u');
+        $userfieldsapi = \core_user\fields::for_name();
+        $namefields = $userfieldsapi->get_sql('u', false, '', '', false)->selects;
+
         $allusers = get_enrolled_users($modcontext, 'mod/attendance:canbelisted', 0, 'u.id,'.$namefields);
         $userlist = array();
         foreach ($allusers as $user) {
@@ -111,7 +111,7 @@ class export extends \moodleform {
             $checkedfields['ident[id]'] = true;
         }
 
-        $extrafields = get_extra_user_fields($modcontext);
+        $extrafields = \core_user\fields::for_identity($modcontext, false)->get_required_fields();
         foreach ($extrafields as $field) {
             $ident[] =& $mform->createElement('checkbox',  $field, '', get_string( $field));
             $mform->setType($field, PARAM_NOTAGS);
@@ -120,7 +120,6 @@ class export extends \moodleform {
 
         require_once($CFG->dirroot . '/user/profile/lib.php');
         $customfields = profile_get_custom_fields();
-
         foreach ($customfields as $field) {
             if ((is_siteadmin($USER) || $field->visible == PROFILE_VISIBLE_ALL || $field->visible == PROFILE_VISIBLE_TEACHERS)
             && in_array($field->shortname, explode(',', $adminsetfields))) {

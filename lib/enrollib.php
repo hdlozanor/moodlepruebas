@@ -433,13 +433,15 @@ function enrol_add_course_navigation(navigation_node $coursenode, $course) {
 
     $usersnode = $coursenode->add(get_string('users'), null, navigation_node::TYPE_CONTAINER, null, 'users');
 
-    if ($course->id != SITEID) {
-        // list all participants - allows assigning roles, groups, etc.
-        if (has_capability('moodle/course:enrolreview', $coursecontext)) {
-            $url = new moodle_url('/user/index.php', array('id'=>$course->id));
-            $usersnode->add(get_string('enrolledusers', 'enrol'), $url, navigation_node::TYPE_SETTING, null, 'review', new pix_icon('i/enrolusers', ''));
-        }
+    // List all participants - allows assigning roles, groups, etc.
+    // Have this available even in the site context as the page is still accessible from the frontpage.
+    if (has_capability('moodle/course:enrolreview', $coursecontext)) {
+        $url = new moodle_url('/user/index.php', array('id' => $course->id));
+        $usersnode->add(get_string('enrolledusers', 'enrol'), $url, navigation_node::TYPE_SETTING,
+            null, 'review', new pix_icon('i/enrolusers', ''));
+    }
 
+    if ($course->id != SITEID) {
         // manage enrol plugin instances
         if (has_capability('moodle/course:enrolconfig', $coursecontext) or has_capability('moodle/course:enrolreview', $coursecontext)) {
             $url = new moodle_url('/enrol/instances.php', array('id'=>$course->id));
@@ -515,6 +517,7 @@ function enrol_add_course_navigation(navigation_node $coursenode, $course) {
                 if ($unenrollink = $plugin->get_unenrolself_link($instance)) {
                     $shortname = format_string($course->shortname, true, array('context' => $coursecontext));
                     $coursenode->add(get_string('unenrolme', 'core_enrol', $shortname), $unenrollink, navigation_node::TYPE_SETTING, null, 'unenrolself', new pix_icon('i/user', ''));
+                    $coursenode->get('unenrolself')->set_force_into_more_menu(true);
                     break;
                     //TODO. deal with multiple unenrol links - not likely case, but still...
                 }
@@ -580,10 +583,13 @@ function enrol_get_my_courses($fields = null, $sort = null, $limit = 0, $coursei
         return array();
     }
 
-    $basefields = array('id', 'category', 'sortorder',
-                        'shortname', 'fullname', 'idnumber',
-                        'startdate', 'visible',
-                        'groupmode', 'groupmodeforce', 'cacherev');
+    $basefields = [
+        'id', 'category', 'sortorder',
+        'shortname', 'fullname', 'idnumber',
+        'startdate', 'visible',
+        'groupmode', 'groupmodeforce', 'cacherev',
+        'showactivitydates', 'showcompletionconditions',
+    ];
 
     if (empty($fields)) {
         $fields = $basefields;
@@ -667,8 +673,8 @@ function enrol_get_my_courses($fields = null, $sort = null, $limit = 0, $coursei
         $orderby = "ORDER BY $sort";
     }
 
-    $wheres = array("c.id <> :siteid");
-    $params = array('siteid'=>SITEID);
+    $wheres = ['c.id <> ' . SITEID];
+    $params = [];
 
     if (isset($USER->loginascontext) and $USER->loginascontext->contextlevel == CONTEXT_COURSE) {
         // list _only_ this course - anything else is asking for trouble...
@@ -1072,7 +1078,7 @@ function enrol_get_all_users_courses($userid, $onlyactive = false, $fields = nul
         $orderby = "ORDER BY $sort";
     }
 
-    $params = array('siteid'=>SITEID);
+    $params = [];
 
     if ($onlyactive) {
         $subwhere = "WHERE ue.status = :active AND e.status = :enabled AND ue.timestart < :now1 AND (ue.timeend = 0 OR ue.timeend > :now2)";
@@ -1098,7 +1104,7 @@ function enrol_get_all_users_courses($userid, $onlyactive = false, $fields = nul
                  $subwhere
                    ) en ON (en.courseid = c.id)
            $ccjoin
-             WHERE c.id <> :siteid
+             WHERE c.id <> " . SITEID . "
           $orderby";
     $params['userid']  = $userid;
 
@@ -1646,7 +1652,7 @@ function get_enrolled_users(context $context, $withcapability = '', $groupid = 0
  * @param string $withcapability
  * @param int $groupid 0 means ignore groups, any other value limits the result by group id
  * @param bool $onlyactive consider only active enrolments in enabled plugins and time restrictions
- * @return array of user records
+ * @return int number of users enrolled into course
  */
 function count_enrolled_users(context $context, $withcapability = '', $groupid = 0, $onlyactive = false) {
     global $DB;

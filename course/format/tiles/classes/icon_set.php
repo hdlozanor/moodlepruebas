@@ -23,8 +23,6 @@
 
 namespace format_tiles;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Icon set class for format tiles.
  * @package    format_tiles
@@ -262,7 +260,9 @@ class icon_set {
             'format_tiles:random' => 'fa-random',
             'format_tiles:star' => 'fa-star',
             'format_tiles:toggle-off' => 'fa-toggle-off',
-            'format_tiles:toggle-on' => 'fa-toggle-on'
+            'format_tiles:toggle-on' => 'fa-toggle-on',
+            'format_tiles:completion-check' => 'fa-check',
+            'format_tiles:completion-fail' => 'fa-times'
         ];
 
          // These are used on sub-tiles (if used) e.g. to show PDF, Excel activities.

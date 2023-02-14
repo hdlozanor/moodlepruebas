@@ -41,8 +41,8 @@ class behat_mod_checklist extends behat_base {
      * View the calendar for a specific course + date
      *
      * @When /^I visit the calendar for course "(?P<course_string>[^"]*)" showing date "(?P<date_string>[^"]*)"$/
-     * @param $coursename
-     * @param $datestring
+     * @param string $coursename
+     * @param string $datestring
      */
     public function i_visit_the_calendar_for_course_showing_date($coursename, $datestring) {
         global $DB;
@@ -122,6 +122,7 @@ class behat_mod_checklist extends behat_base {
                                 'month' => $dateinfo['mon'],
                                 'day' => $dateinfo['mday']
                             );
+                            $chk->set_editing_dates(true);
                         }
                         break;
                     default:
@@ -137,7 +138,7 @@ class behat_mod_checklist extends behat_base {
      *
      * @Given /^the following items are checked off in checklist "(?P<checklist_string>[^"]*)" for user "(?P<user_string>[^"]*)":$/
      * @param string $checklistname
-     * @param $username
+     * @param string $username
      * @param TableNode $table
      */
     public function the_following_items_are_checked_off_in_checklist_for_user($checklistname, $username, TableNode $table) {
@@ -199,10 +200,10 @@ class behat_mod_checklist extends behat_base {
                 }
                 $update[$fieldname] = $value;
             }
-            if (!in_array($update['studentmark'], $studentmarkmap)) {
+            if (!array_key_exists($update['studentmark'], $studentmarkmap)) {
                 throw new Exception('Invalid studentmark value \''.$update['studentmark'].'\' in checklist update');
             }
-            if (!in_array($update['teachermark'], $teachermarkmap)) {
+            if (!array_key_exists($update['teachermark'], $teachermarkmap)) {
                 throw new Exception('Invalid teachermark value \''.$update['teachermark'].'\' in checklist update');
             }
 
@@ -229,5 +230,29 @@ class behat_mod_checklist extends behat_base {
                 $chk->update_teachermarks($checkmarks, $teacherid);
             }
         }
+    }
+
+    /**
+     * Once I'm only supporting Moodle 4.0+, I can use the standard step: And I enable "selfcompletion" "block" plugin
+     * @Given /^I enable selfcompletion block plugin for use by mod_checklist$/
+     */
+    public function i_enable_selfcompletion_block_plugin_for_use_by_mod_checklist() {
+        global $DB;
+        $DB->set_field('block', 'visible', 1, ['name' => 'selfcompletion']);
+    }
+
+    /**
+     * Set the given field to the view URL for the given activity
+     * @Given /^I set the field "([^"]*)" to the view URL for activity "([^"]*)"$/
+     * @param string $fieldname the field to set
+     * @param string $activityidnumber the idnumber of the activity to link to
+     */
+    public function i_set_the_field_to_the_view_u_r_l_for_activity(string $fieldname, string $activityidnumber) {
+        global $DB;
+        $cmrec = $DB->get_record('course_modules', ['idnumber' => $activityidnumber], 'id, course', MUST_EXIST);
+        $modinfo = get_fast_modinfo($cmrec->course);
+        $cm = $modinfo->get_cm($cmrec->id);
+        $url = $cm->get_url()->out(false);
+        $this->execute('behat_forms::i_set_the_field_to', [$fieldname, $url]);
     }
 }

@@ -56,11 +56,15 @@ function update_question_types() {
 // CR_PROTOTYPES category.
 function delete_existing_prototypes($systemcontextid) {
     global $DB;
+
     $query = "SELECT q.id
-              FROM {question} q JOIN {question_categories} cats
-              ON q.category = cats.id
-              WHERE cats.contextid=?
-              AND cats.name='CR_PROTOTYPES'
+              FROM {context} ctx
+              JOIN {question_categories} qc ON qc.contextid = ctx.id
+              JOIN {question_bank_entries} qbe ON qbe.questioncategoryid = qc.id
+              JOIN {question_versions} qv ON qv.questionbankentryid = qbe.id
+              JOIN {question} q ON q.id = qv.questionid
+              WHERE ctx.id=?
+              AND qc.name='CR_PROTOTYPES'
               AND q.name LIKE '%PROTOTYPE_%'";
     $prototypes = $DB->get_records_sql($query, array($systemcontextid));
     foreach ($prototypes as $question) {
@@ -173,7 +177,7 @@ function load_questions($category, $importfilename, $contextid) {
     $qformat = new qformat_xml();
     $qformat->setCategory($category);
     $systemcontext = context::instance_by_id($contextid);
-    $contexts = new question_edit_contexts($systemcontext);
+    $contexts = new core_question\local\bank\question_edit_contexts($systemcontext);
     $qformat->setContexts($contexts->having_one_edit_tab_cap('import'));
     $qformat->setCourse($COURSE);
     $qformat->setFilename($importfilename);

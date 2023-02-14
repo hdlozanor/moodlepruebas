@@ -270,12 +270,20 @@ class certificate {
         $allparams = $conditionsparams + array('customcertid' => $customcertid);
 
         // Return the issues.
-        $extrafields = get_extra_user_fields(\context_module::instance($cm->id));
-        $ufields = \user_picture::fields('u', $extrafields);
-        $sql = "SELECT $ufields, ci.id as issueid, ci.code, ci.timecreated
+        $context = \context_module::instance($cm->id);
+        $extrafields = \core_user\fields::for_identity($context)->get_required_fields();
+
+        $ufields = \core_user\fields::for_userpic()->including(...$extrafields);
+        [
+            'selects' => $userfieldsselects,
+            'joins' => $userfieldsjoin,
+            'params' => $userfieldsparams
+        ] = (array) $ufields->get_sql('u', true);
+        $allparams = array_merge($allparams, $userfieldsparams);
+        $sql = "SELECT ci.id as issueid, ci.code, ci.timecreated $userfieldsselects
                   FROM {user} u
-            INNER JOIN {customcert_issues} ci
-                    ON u.id = ci.userid
+            INNER JOIN {customcert_issues} ci ON u.id = ci.userid
+                       $userfieldsjoin
                  WHERE u.deleted = 0
                    AND ci.customcertid = :customcertid
                        $conditionssql";

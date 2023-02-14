@@ -111,15 +111,27 @@ class api {
         global $DB;
 
         // Get the user fields we want.
-        $ufields = \user_picture::fields('u', array('lastaccess'), 'userfrom_id', 'userfrom_');
-        $ufields2 = \user_picture::fields('u2', array('lastaccess'), 'userto_id', 'userto_');
+        $userfieldsapi = \core_user\fields::for_userpic()->including('lastaccess');
+        $ufields = $userfieldsapi->get_sql('u', false, 'userfrom_', '', false)->selects;
+        $ufields2 = $userfieldsapi->get_sql('u2', false, 'userto_', '', false)->selects;
         // Add the uniqueid column to make each row unique and avoid SQL errors.
         $uniqueidsql = $DB->sql_concat('m.id', "'_'", 'm.useridfrom', "'_'", 'mcm.userid');
 
         $sql = "SELECT $uniqueidsql AS uniqueid, m.id, m.useridfrom, mcm.userid as useridto, m.subject, m.fullmessage,
                        m.fullmessagehtml, m.fullmessageformat, m.smallmessage, m.conversationid, m.timecreated, 0 as isread,
                        $ufields, mub.id as userfrom_blocked, $ufields2, mub2.id as userto_blocked
-                  FROM {messages} m
+                  FROM (
+                        SELECT m2.id AS id
+                          FROM {messages} m2
+                         WHERE m2.useridfrom = ?
+                         UNION
+                        SELECT m3.id AS id
+                          FROM {message_conversation_members} mcm3
+                    INNER JOIN {messages} m3 ON mcm3.conversationid = m3.conversationid
+                         WHERE mcm3.userid = ?
+                       ) der
+            INNER JOIN {messages} m
+                    ON der.id = m.id
             INNER JOIN {user} u
                     ON u.id = m.useridfrom
             INNER JOIN {message_conversations} mc
@@ -142,7 +154,7 @@ class api {
                    AND " . $DB->sql_like('smallmessage', '?', false) . "
               ORDER BY timecreated DESC";
 
-        $params = array($userid, $userid, $userid, self::MESSAGE_ACTION_DELETED, $userid, $userid,
+        $params = array($userid, $userid, $userid, $userid, $userid, self::MESSAGE_ACTION_DELETED, $userid, $userid,
             self::MESSAGE_CONVERSATION_TYPE_SELF, '%' . $search . '%');
 
         // Convert the messages into searchable contacts with their last message being the message that was searched.
@@ -238,23 +250,64 @@ class api {
         // Let's get those non-contacts.
         // Because we can't achieve all the required visibility checks in SQL, we'll iterate through the non-contact records
         // and stop once we have enough matching the 'visible' criteria.
-        // TODO: MDL-63983 - Improve the performance of non-contact searches when site-wide messaging is disabled (default).
 
         // Use a local generator to achieve this iteration.
-        $getnoncontactusers = function ($limitfrom = 0, $limitnum = 0) use($fullname, $exclude, $params, $excludeparams) {
-            global $DB;
-            $sql = "SELECT u.*
-                  FROM {user} u
-                 WHERE u.deleted = 0
-                   AND u.confirmed = 1
-                   AND " . $DB->sql_like($fullname, ':search', false) . "
-                   AND u.id $exclude
-                   AND NOT EXISTS (SELECT mc.id
-                                     FROM {message_contacts} mc
-                                    WHERE (mc.userid = u.id AND mc.contactid = :userid1)
-                                       OR (mc.userid = :userid2 AND mc.contactid = u.id))
-              ORDER BY " . $DB->sql_fullname();
-            while ($records = $DB->get_records_sql($sql, $params + $excludeparams, $limitfrom, $limitnum)) {
+        $getnoncontactusers = function ($limitfrom = 0, $limitnum = 0) use (
+            $fullname,
+            $exclude,
+            $params,
+            $excludeparams,
+            $userid,
+            $selfconversation
+        ) {
+            global $DB, $CFG;
+
+            $joinenrolled = '';
+            $enrolled = '';
+            $unionself = '';
+            $enrolledparams = [];
+
+            // Since we want to order a UNION we need to list out all the user fields individually this will
+            // allow us to reference the fullname correctly.
+            $userfields = implode(', u.', get_user_fieldnames());
+            $select = "u.id, " . $DB->sql_fullname() ." AS sortingname, u." . $userfields;
+
+            // When messageallusers is false valid non-contacts must be enrolled on one of the users courses.
+            if (empty($CFG->messagingallusers)) {
+                $joinenrolled = "JOIN {user_enrolments} ue ON ue.userid = u.id
+                                 JOIN {enrol} e ON e.id = ue.enrolid";
+                $enrolled = "AND e.courseid IN (
+                                SELECT e.courseid
+                                  FROM {user_enrolments} ue
+                                  JOIN {enrol} e ON e.id = ue.enrolid
+                                 WHERE ue.userid = :enroluserid
+                                )";
+
+                if ($selfconversation !== false) {
+                    // We must include the user themselves, when they have a self conversation, even if they are not
+                    // enrolled on any courses.
+                    $unionself = "UNION SELECT u.id FROM {user} u
+                                         WHERE u.id = :self AND ". $DB->sql_like($fullname, ':selfsearch', false);
+                }
+                $enrolledparams = ['enroluserid' => $userid, 'self' => $userid, 'selfsearch' => $params['search']];
+            }
+
+            $sql = "SELECT $select
+                      FROM (
+                        SELECT DISTINCT u.id
+                          FROM {user} u $joinenrolled
+                         WHERE u.deleted = 0
+                           AND u.confirmed = 1
+                           AND " . $DB->sql_like($fullname, ':search', false) . "
+                           AND u.id $exclude $enrolled
+                           AND NOT EXISTS (SELECT mc.id
+                                             FROM {message_contacts} mc
+                                            WHERE (mc.userid = u.id AND mc.contactid = :userid1)
+                                               OR (mc.userid = :userid2 AND mc.contactid = u.id)) $unionself
+                         ) targetedusers
+                      JOIN {user} u ON u.id = targetedusers.id
+                  ORDER BY 2";
+            while ($records = $DB->get_records_sql($sql, $params + $excludeparams + $enrolledparams, $limitfrom, $limitnum)) {
                 yield $records;
                 $limitfrom += $limitnum;
             }
@@ -1022,7 +1075,8 @@ class api {
         debugging('\core_message\api::get_contacts_with_unread_message_count is deprecated and no longer used',
             DEBUG_DEVELOPER);
 
-        $userfields = \user_picture::fields('u', array('lastaccess'));
+        $userfieldsapi = \core_user\fields::for_userpic()->including('lastaccess');
+        $userfields = $userfieldsapi->get_sql('u', false, '', '', false)->selects;
         $unreadcountssql = "SELECT $userfields, count(m.id) as messagecount
                               FROM {message_contacts} mc
                         INNER JOIN {user} u
@@ -1063,7 +1117,8 @@ class api {
         debugging('\core_message\api::get_non_contacts_with_unread_message_count is deprecated and no longer used',
             DEBUG_DEVELOPER);
 
-        $userfields = \user_picture::fields('u', array('lastaccess'));
+        $userfieldsapi = \core_user\fields::for_userpic()->including('lastaccess');
+        $userfields = $userfieldsapi->get_sql('u', false, '', '', false)->selects;
         $unreadcountssql = "SELECT $userfields, count(m.id) as messagecount
                               FROM {user} u
                         INNER JOIN {messages} m
@@ -1535,27 +1590,13 @@ class api {
     }
 
     /**
-     * Determines if a user is permitted to send another user a private message.
-     * If no sender is provided then it defaults to the logged in user.
-     *
      * @deprecated since 3.8
-     * @todo Final deprecation in MDL-66266
-     * @param \stdClass $recipient The user object.
-     * @param \stdClass|null $sender The user object.
-     * @return bool true if user is permitted, false otherwise.
      */
-    public static function can_post_message($recipient, $sender = null) {
-        global $USER;
-
-        debugging('\core_message\api::can_post_message is deprecated, please use ' .
-            '\core_message\api::can_send_message instead.', DEBUG_DEVELOPER);
-
-        if (is_null($sender)) {
-            // The message is from the logged in user, unless otherwise specified.
-            $sender = $USER;
-        }
-
-        return self::can_send_message($recipient->id, $sender->id);
+    public static function can_post_message() {
+        throw new \coding_exception(
+            '\core_message\api::can_post_message is deprecated and no longer used, ' .
+            'please use \core_message\api::can_send_message instead.'
+        );
     }
 
     /**
@@ -1885,7 +1926,8 @@ class api {
     public static function get_blocked_users($userid) {
         global $DB;
 
-        $userfields = \user_picture::fields('u', array('lastaccess'));
+        $userfieldsapi = \core_user\fields::for_userpic()->including('lastaccess');
+        $userfields = $userfieldsapi->get_sql('u', false, '', '', false)->selects;
         $blockeduserssql = "SELECT $userfields
                               FROM {message_users_blocked} mub
                         INNER JOIN {user} u
@@ -2059,56 +2101,11 @@ class api {
     }
 
     /**
-     * Returns the conversations between sets of users.
-     *
-     * The returned array of results will be in the same order as the requested
-     * arguments, null will be returned if there is no conversation for that user
-     * pair.
-     *
-     * For example:
-     * If we have 6 users with ids 1, 2, 3, 4, 5, 6 where only 2 conversations
-     * exist. One between 1 and 2 and another between 5 and 6.
-     *
-     * Then if we call:
-     * $conversations = get_individual_conversations_between_users([[1,2], [3,4], [5,6]]);
-     *
-     * The conversations array will look like:
-     * [<conv_record>, null, <conv_record>];
-     *
-     * Where null is returned for the pairing of [3, 4] since no record exists.
-     *
      * @deprecated since 3.8
-     * @param array $useridsets An array of arrays where the inner array is the set of user ids
-     * @return stdClass[] Array of conversation records
      */
-    public static function get_individual_conversations_between_users(array $useridsets) : array {
-        global $DB;
-
-        debugging('\core_message\api::get_individual_conversations_between_users is deprecated and no longer used',
-            DEBUG_DEVELOPER);
-
-        if (empty($useridsets)) {
-            return [];
-        }
-
-        $hashes = array_map(function($userids) {
-            return  helper::get_conversation_hash($userids);
-        }, $useridsets);
-
-        list($inorequalsql, $params) = $DB->get_in_or_equal($hashes);
-        array_unshift($params, self::MESSAGE_CONVERSATION_TYPE_INDIVIDUAL);
-        $where = "type = ? AND convhash ${inorequalsql}";
-        $conversations = array_fill(0, count($hashes), null);
-        $records = $DB->get_records_select('message_conversations', $where, $params);
-
-        foreach (array_values($records) as $record) {
-            $index = array_search($record->convhash, $hashes);
-            if ($index !== false) {
-                $conversations[$index] = $record;
-            }
-        }
-
-        return $conversations;
+    public static function get_individual_conversations_between_users() {
+        throw new \coding_exception('\core_message\api::get_individual_conversations_between_users ' .
+            ' is deprecated and no longer used.');
     }
 
     /**

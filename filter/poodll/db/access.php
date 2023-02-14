@@ -17,24 +17,40 @@
 /**
  * Plugin capabilities
  *
- * @package    tinymce_skim
- * @copyright  2013 Justin Hunt {@link http://www.poodll.com}
+ * @package    filter_poodll
+ * @copyright  2017 Justin Hunt {@link http://www.poodll.com}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
 $capabilities = array(
-
-    'filter/poodll:candownloadmedia' => array(
-        'captype' => 'read',
-        'contextlevel' => CONTEXT_COURSE,
-        'archetypes' => array(
-			'coursecreator' => CAP_ALLOW,
-			'teacher' => CAP_ALLOW,
-            'editingteacher' => CAP_ALLOW,
-            'manager' => CAP_ALLOW
-        )
-    )
+        'filter/poodll:use' => array(
+                'captype' => 'write',
+                'contextlevel' => CONTEXT_COURSE,
+                'archetypes' => array(
+                        'manager' => CAP_ALLOW,
+                        'editingteacher' => CAP_ALLOW
+                ),
+        ),
+        'filter/poodll:candownloadmedia' => array(
+                'captype' => 'read',
+                'contextlevel' => CONTEXT_COURSE,
+                'archetypes' => array(
+                        'coursecreator' => CAP_ALLOW,
+                        'teacher' => CAP_ALLOW,
+                        'editingteacher' => CAP_ALLOW,
+                        'manager' => CAP_ALLOW
+                )
+        ),
+        'filter/poodll:comparetext' => array(
+                'captype' => 'read',
+                'contextlevel' => CONTEXT_MODULE,
+                'archetypes' => array(
+                        'user' => CAP_ALLOW,
+                        'guest' => CAP_ALLOW
+                ),
+                'clonepermissionsfrom' => 'mod/label:view'
+        ),
 );
 

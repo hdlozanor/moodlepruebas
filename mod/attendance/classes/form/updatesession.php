@@ -24,8 +24,6 @@
 
 namespace mod_attendance\form;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * class for displaying update session form.
  *
@@ -41,7 +39,7 @@ class updatesession extends \moodleform {
      */
     public function definition() {
 
-        global $DB;
+        global $DB, $COURSE;
         $mform    =& $this->_form;
 
         $modcontext    = $this->_customdata['modcontext'];
@@ -80,6 +78,8 @@ class updatesession extends \moodleform {
             'preventsharediptime' => $sess->preventsharediptime,
             'includeqrcode' => $sess->includeqrcode,
             'rotateqrcode' => $sess->rotateqrcode,
+            'automarkcmid' => $sess->automarkcmid,
+            'studentsearlyopentime' => $sess->studentsearlyopentime
         );
         if ($sess->subnet == $attendancesubnet) {
             $data['usedefaultsubnet'] = 1;
@@ -137,17 +137,33 @@ class updatesession extends \moodleform {
         if (!empty($studentscanmark)) {
             $mform->addElement('checkbox', 'studentscanmark', '', get_string('studentscanmark', 'attendance'));
             $mform->addHelpButton('studentscanmark', 'studentscanmark', 'attendance');
+
+            $mform->addElement('duration', 'studentsearlyopentime', get_string('studentsearlyopentime', 'attendance'));
+            $mform->addHelpButton('studentsearlyopentime', 'studentsearlyopentime', 'attendance');
+            $mform->hideif('studentsearlyopentime', 'studentscanmark', 'notchecked');
         } else {
             $mform->addElement('hidden', 'studentscanmark', '0');
             $mform->settype('studentscanmark', PARAM_INT);
+            $mform->addElement('hidden', 'studentsearlyopentime', '0');
+            $mform->settype('studentsearlyopentime', PARAM_INT);
         }
 
-        $options2 = attendance_get_automarkoptions();
+        if ($DB->record_exists('attendance_statuses', ['attendanceid' => $this->_customdata['att']->id, 'setunmarked' => 1])) {
+            $options2 = attendance_get_automarkoptions();
 
-        $mform->addElement('select', 'automark', get_string('automark', 'attendance'), $options2);
-        $mform->setType('automark', PARAM_INT);
-        $mform->addHelpButton('automark', 'automark', 'attendance');
+            $mform->addElement('select', 'automark', get_string('automark', 'attendance'), $options2);
+            $mform->setType('automark', PARAM_INT);
+            $mform->addHelpButton('automark', 'automark', 'attendance');
 
+            $automarkcmoptions2 = attendance_get_coursemodulenames($COURSE->id);
+
+            $mform->addElement('select', 'automarkcmid', get_string('selectactivity', 'attendance'), $automarkcmoptions2);
+            $mform->setType('automarkcmid', PARAM_INT);
+            $mform->hideif('automarkcmid', 'automark', 'neq', '3');
+            if (!empty($sess->automarkcompleted)) {
+                $mform->hardFreeze('automarkcmid,automark,studentscanmark');
+            }
+        }
         if (!empty($studentscanmark)) {
             $mform->addElement('text', 'studentpassword', get_string('studentpassword', 'attendance'));
             $mform->setType('studentpassword', PARAM_TEXT);
@@ -193,6 +209,12 @@ class updatesession extends \moodleform {
         $mform->setAdvanced('preventsharedgroup');
         $mform->setType('preventsharediptime', PARAM_INT);
 
+        // Add custom field data to form.
+        $handler = \mod_attendance\customfield\session_handler::create();
+        $handler->instance_form_definition($mform, $sess->id);
+        $data['id'] = $sess->id;
+        $data = $handler->instance_form_before_set_data_array($data);
+
         $mform->setDefaults($data);
         $this->add_action_buttons(true);
     }
@@ -212,7 +234,9 @@ class updatesession extends \moodleform {
             $errors['sestime'] = get_string('invalidsessionendtime', 'attendance');
         }
 
-        if (!empty($data['studentscanmark']) && $data['automark'] == ATTENDANCE_AUTOMARK_CLOSE) {
+        if (!empty($data['studentscanmark']) && isset($data['automark'])
+            && $data['automark'] == ATTENDANCE_AUTOMARK_CLOSE) {
+
             $cm            = $this->_customdata['cm'];
             // Check that the selected statusset has a status to use when unmarked.
             $sql = 'SELECT id

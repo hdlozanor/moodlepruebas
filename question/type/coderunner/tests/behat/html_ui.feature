@@ -20,18 +20,15 @@ Feature: Test the HTML_UI
     And the following "questions" exist:
       | questioncategory | qtype      | name         | template |
       | Test questions   | coderunner | Print answer | printans |
-    And I log in as "teacher1"
-    And I am on "Course 1" course homepage
-    And I navigate to "Question bank" in current page administration
 
   Scenario: Edit a CodeRunner printans question into an html UI question
-    When I choose "Edit question" action for "Print answer" in the question bank
+    When I am on the "Print answer" "core_question > edit" page logged in as teacher1
     And I set the field "id_answer" to ""
     And I set the following fields to these values:
       | id_customise   | 1                                 |
       | id_template    | print('''{{ STUDENT_ANSWER }}''') |
       | id_uiplugin    | Html                              |
-      | id_expected_0  | {"cr_inputfield":["bubble"]}     |
+      | id_expected_0  | {"cr_inputfield":["bubble"]}      |
 
     And I set the field "id_globalextra" to:
      """
@@ -47,7 +44,6 @@ Feature: Test the HTML_UI
     And I press "id_submitbutton"
     Then I should not see "Failed"
     And I should see "Created by"
-    And I should see "Last modified by"
 
     When I choose "Edit question" action for "Print answer" in the question bank
     And I set the field "id_globalextra" to ""
@@ -62,10 +58,8 @@ Feature: Test the HTML_UI
     Then "[name='cr_inputfield']" "css_element" should not exist
     Then I should not see "Failed"
     And I should see "Created by"
-    And I should see "Last modified by"
 
     When I choose "Preview" action for "Print answer" in the question bank
-    And I switch to "questionpreview" window
     And I set the field "cr_inputfield" to "bubble"
     And I press "Check"
     Then I should see "Passed all tests!"

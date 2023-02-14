@@ -22,10 +22,31 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+defined('MOODLE_INTERNAL') || die;
+
+/**
+ * Extends core navigation to display the roster link in the course administration.
+ *
+ * @param navigation_node $navigation The navigation node to extend
+ * @param stdClass        $course The course object
+ * @param context         $context The course context
+ */
 function report_roster_extend_navigation_course($navigation, $course, $context) {
     if (has_capability('report/roster:view', $context)) {
         $url = new moodle_url('/report/roster/index.php', array('id' => $course->id));
         $navigation->add(get_string('pluginname', 'report_roster'), $url,
                 navigation_node::TYPE_SETTING, null, null, new pix_icon('i/report', ''));
     }
+}
+
+/**
+ * Creates a mapping between the Moodle icon system and Font Awesome icons.
+ * See https://docs.moodle.org/dev/Moodle_icons#Font_awesome_icons.
+ *
+ * @return array
+ */
+function report_roster_get_fontawesome_icon_map() {
+    return [
+        'report_roster:t/roster' => 'fa-clipboard',
+    ];
 }

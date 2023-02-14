@@ -1,11 +1,12 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
 //
-// You can redistribute it and/or modify
+// Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// It is distributed in the hope that it will be useful,
+// Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
@@ -14,10 +15,10 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Strings for component 'format_onetopic', language 'es', branch 'MOODLE_24_STABLE'
+ * Strings for component 'format_onetopic', language 'es'
  *
  * @since 2.4
- * @package contribution
+ * @package format_onetopic
  * @copyright 2012 David Herney Bernal - cirano
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -81,3 +82,16 @@ $string['templetetopic_single'] = 'Si, usar el resumen como una plantilla';
 $string['templetetopic_list'] = 'Si, usar el resumen como plantilla y listar los recursos no referenciados';
 $string['templatetopic_icons'] = 'Mostrar icono en enlaces de recursos en el resumen';
 $string['templatetopic_icons_help'] = 'Esta opción define si se muestran o no los iconos de los recursos como parte del nombre, cuando el resumen del tema se utiliza como plantilla.';
+$string['hidden_message'] = 'El tema <em>{$a}</em> no está disponible en este momento.';
+$string['privacy:metadata'] = 'El formato Temas en pestañas no almacena datos personales.';
+$string['hiddensectionshelp'] = 'Las secciones ocultas se muestran en forma colapsada con mensaje de disponibilidad';
+
+$string['tabsview'] = 'Vista de pestañas';
+$string['tabsview_help'] = 'Por defecto: es la vista tradicional de pestañas.<br />
+Verticalmente: se muestran las pestañas al lado izquierdo de manera vertical. El contenido queda a la derecha del menú.<br />
+Una sola línea: todas las pestañas son mostradas en una sola línea, con desplazamiento horizontal si es necesario. Es útil sobre todo cuando hay demasiadas pestañas.';
+$string['tabsview_default'] = 'Por defecto';
+$string['tabsview_vertical'] = 'Verticalmente';
+$string['tabsview_oneline'] = 'Una sola línea';
+
+$string['increasesections'] = 'Adicionar una nueva sección después de la sección actual';

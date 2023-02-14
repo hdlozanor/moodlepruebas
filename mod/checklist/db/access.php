@@ -15,8 +15,16 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Capability definitions for the checklist module
+ * Capability definitions.
+ *
+ * @copyright Davo Smith <moodle@davosmith.co.uk>
+ * @package mod_checklist
+ * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+defined('MOODLE_INTERNAL') || die();
+
+// Capability definitions for the checklist module.
 
 $capabilities = array(
     // Check if user is able to add a checklist module (M2.3+ only).

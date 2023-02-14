@@ -1,11 +1,12 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
 //
-// You can redistribute it and/or modify
+// Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// It is distributed in the hope that it will be useful,
+// Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
@@ -14,10 +15,10 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Strings for component 'format_onetopic', language 'en', branch 'MOODLE_24_STABLE'
+ * Strings for component 'format_onetopic', language 'en'
  *
  * @since 2.4
- * @package contribution
+ * @package format_onetopic
  * @copyright 2012 David Herney Bernal - cirano
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -82,3 +83,16 @@ $string['templetetopic_single'] = 'Yes, use the summary as template';
 $string['templetetopic_list'] = 'Yes, use the summary as template, list the resources that are not referenced';
 $string['templatetopic_icons'] = 'Show icon in resource links in summary';
 $string['templatetopic_icons_help'] = 'This option defines if the icons are displayed in the summary when it is a template.';
+$string['hidden_message'] = 'The section <em>{$a}</em> is not currently available.';
+$string['privacy:metadata'] = 'The Onetopic format plugin does not store any personal data.';
+$string['hiddensectionshelp'] = 'Hidden sections are shown in collapsed form with available message';
+
+$string['tabsview'] = 'Tabs view';
+$string['tabsview_help'] = 'By default: is the traditional view.<br />
+Vertically: show tabs in vertical direction. Tabs on the left and content on the right.<br />
+One single line: all tabs are displayed in a single line with horizontal scroll. Useful if too many tabs are used.';
+$string['tabsview_default'] = 'By default';
+$string['tabsview_vertical'] = 'Vertically';
+$string['tabsview_oneline'] = 'Only one line';
+
+$string['increasesections'] = 'Add a section after the currently selected section';

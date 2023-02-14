@@ -111,13 +111,16 @@ switch ($att->pageparams->action) {
                     ($status->description ? $status->description : get_string('nodescription', 'attendance'));
         $params = array_merge($att->pageparams->get_significant_params(), array('confirm' => 1));
         echo $OUTPUT->header();
-        echo $OUTPUT->heading(get_string('attendanceforthecourse', 'attendance').' :: ' .format_string($course->fullname));
         echo $OUTPUT->confirm($message, $att->url_preferences($params), $att->url_preferences());
         echo $OUTPUT->footer();
         exit;
     case mod_attendance_preferences_page_params::ACTION_HIDE:
         $statuses = $att->get_statuses(false);
         $status = $statuses[$att->pageparams->statusid];
+        // Prevent hiding status if in-use.
+        if (attendance_has_logs_for_status($att->pageparams->statusid)) {
+            throw new moodle_exception('canthidestatus', 'attendance', "attsettings.php?id=$id");
+        }
         attendance_update_status($status, null, null, null, 0, $att->context, $att->cm);
         break;
     case mod_attendance_preferences_page_params::ACTION_SHOW:
@@ -151,9 +154,8 @@ switch ($att->pageparams->action) {
 }
 
 $output = $PAGE->get_renderer('mod_attendance');
-$tabs = new attendance_tabs($att, attendance_tabs::TAB_PREFERENCES);
-$prefdata = new attendance_preferences_data($att, array_filter($errors));
-$setselector = new attendance_set_selector($att, $maxstatusset);
+$prefdata = new mod_attendance\output\preferences_data($att, array_filter($errors));
+$setselector = new mod_attendance\output\set_selector($att, $maxstatusset);
 
 // Output starts here.
 
@@ -161,8 +163,6 @@ echo $output->header();
 if (!empty($notification)) {
     echo $notification;
 }
-echo $output->heading(get_string('attendanceforthecourse', 'attendance').' :: '. format_string($course->fullname));
-echo $output->render($tabs);
 echo $OUTPUT->box(get_string('preferences_desc', 'attendance'), 'generalbox attendancedesc', 'notice');
 echo $output->render($setselector);
 echo $output->render($prefdata);

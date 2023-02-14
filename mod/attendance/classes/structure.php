@@ -397,6 +397,16 @@ class mod_attendance_structure {
     }
 
     /**
+     * Get url for import.
+     *
+     * @return moodle_url of import.php for attendance instance
+     */
+    public function url_import() : moodle_url {
+        $params = ['id' => $this->cm->id];
+        return new moodle_url('/mod/attendance/import.php', $params);
+    }
+
+    /**
      * Get url for export.
      *
      * @return moodle_url of export.php for attendance instance
@@ -466,6 +476,22 @@ class mod_attendance_structure {
     }
 
     /**
+     * Undocumented function
+     *
+     * @param array $sessions
+     * @param object $formdata
+     * @return void
+     */
+    public function save_customfields($sessions, $formdata) {
+        foreach ($sessions as $session) {
+            $handler = mod_attendance\customfield\session_handler::create();
+            $formdata->id = $session->id;
+            $handler->instance_form_save($formdata, true);
+        }
+
+    }
+
+    /**
      * Add single session.
      *
      * @param stdClass $sess
@@ -510,6 +536,9 @@ class mod_attendance_structure {
         if (!isset($sess->studentscanmark)) {
             $sess->studentscanmark = 0;
         }
+        if (!isset($sess->studentsearlyopentime)) {
+            $sess->studentsearlyopentime = 0;
+        }
         if (!isset($sess->autoassignstatus)) {
             $sess->autoassignstatus = 0;
         }
@@ -533,6 +562,9 @@ class mod_attendance_structure {
         if (!isset($sess->rotateqrcode)) {
             $sess->rotateqrcode = 0;
             $sess->rotateqrcodesecret = '';
+        }
+        if (!isset($sess->automarkcmid)) {
+            $sess->automarkcmid = null;
         }
         $event->add_record_snapshot('attendance_sessions', $sess);
         $event->trigger();
@@ -572,6 +604,7 @@ class mod_attendance_structure {
         $sess->subnet = '';
         $sess->automark = 0;
         $sess->automarkcompleted = 0;
+        $sess->studentsearlyopentime = 0;
         $sess->preventsharedip = 0;
         $sess->preventsharediptime = '';
         $sess->includeqrcode = 0;
@@ -609,11 +642,18 @@ class mod_attendance_structure {
         if (!empty($formdata->automark)) {
             $sess->automark = $formdata->automark;
         }
+        if (!empty($formdata->studentsearlyopentime)) {
+            $sess->studentsearlyopentime = $formdata->studentsearlyopentime;
+        }
         if (!empty($formdata->preventsharedip)) {
             $sess->preventsharedip = $formdata->preventsharedip;
         }
         if (!empty($formdata->preventsharediptime)) {
             $sess->preventsharediptime = $formdata->preventsharediptime;
+        }
+
+        if (!empty($formdata->automarkcmid)) {
+            $sess->automarkcmid = $formdata->automarkcmid;
         }
 
         $sess->timemodified = time();
@@ -799,14 +839,12 @@ class mod_attendance_structure {
      * @return array
      */
     public function get_users($groupid = 0, $page = 1) : array {
-        global $DB;
+        global $DB, $CFG;
+        require_once($CFG->dirroot . '/user/profile/lib.php'); // For profile_load_data().
 
         $fields = array('username' , 'idnumber' , 'institution' , 'department', 'city', 'country');
-        // Get user identity fields if required - doesn't return original $fields array.
-        $extrafields = get_extra_user_fields($this->context, $fields);
-        $fields = array_merge($fields, $extrafields);
-
-        $userfields = user_picture::fields('u', $fields);
+        $userf = \core_user\fields::for_identity($this->context, false)->with_userpic()->including(...$fields);
+        $userfields = $userf->get_sql('u', false, '', 'id', false)->selects;
 
         if (empty($this->pageparams->sort)) {
             $this->pageparams->sort = ATT_SORT_DEFAULT;
@@ -889,6 +927,11 @@ class mod_attendance_structure {
             $users[$tempuser->studentid] = self::tempuser_to_user($tempuser);
         }
 
+        // Add custom profile field data.
+        foreach ($users as $user) {
+            profile_load_data($user);
+        }
+
         return $users;
     }
 
@@ -912,7 +955,7 @@ class mod_attendance_structure {
             'picture' => 0,
             'type' => 'temporary',
         );
-        $allfields = get_all_user_name_fields();
+        $allfields = \core_user\fields::get_name_fields();
         if (!empty($CFG->showuseridentity)) {
             $allfields = array_merge($allfields, explode(',', $CFG->showuseridentity));
         }
@@ -1140,7 +1183,8 @@ class mod_attendance_structure {
         if ($this->get_group_mode()) {
             $sql = "SELECT $id, ats.id, ats.groupid, ats.sessdate, ats.duration, ats.description,
                            al.statusid, al.remarks, ats.studentscanmark, ats.autoassignstatus,
-                           ats.preventsharedip, ats.preventsharediptime, ats.rotateqrcode
+                           ats.preventsharedip, ats.preventsharediptime, ats.rotateqrcode,
+                           ats.studentsearlyopentime
                       FROM {attendance_sessions} ats
                 RIGHT JOIN {attendance_log} al
                         ON ats.id = al.sessionid AND al.studentid = :uid
@@ -1150,7 +1194,8 @@ class mod_attendance_structure {
         } else {
             $sql = "SELECT $id, ats.id, ats.groupid, ats.sessdate, ats.duration, ats.description, ats.statusset,
                            al.statusid, al.remarks, ats.studentscanmark, ats.autoassignstatus,
-                           ats.preventsharedip, ats.preventsharediptime, ats.rotateqrcode
+                           ats.preventsharedip, ats.preventsharediptime, ats.rotateqrcode,
+                           ats.studentsearlyopentime
                       FROM {attendance_sessions} ats
                 RIGHT JOIN {attendance_log} al
                         ON ats.id = al.sessionid AND al.studentid = :uid
@@ -1181,7 +1226,8 @@ class mod_attendance_structure {
         }
         $sql = "SELECT $id, ats.id, ats.groupid, ats.sessdate, ats.duration, ats.description, ats.statusset,
                        al.statusid, al.remarks, ats.studentscanmark, ats.autoassignstatus,
-                       ats.preventsharedip, ats.preventsharediptime, ats.rotateqrcode
+                       ats.preventsharedip, ats.preventsharediptime, ats.rotateqrcode,
+                       ats.studentsearlyopentime
                   FROM {attendance_sessions} ats
              LEFT JOIN {attendance_log} al
                     ON ats.id = al.sessionid AND al.studentid = :uid
@@ -1305,9 +1351,16 @@ class mod_attendance_structure {
             }
         } else {
             foreach ($statuses as $status) {
-                if ($status->studentavailability !== '0' &&
-                    $this->sessioninfo[$sessionid]->sessdate + ($status->studentavailability * 60) > $time) {
-
+                if ($status->studentavailability === '0') {
+                    // This status not available to students.
+                    continue;
+                }
+                if (empty($status->studentavailability) && ($session->sessdate + $duration >= $time) &&
+                    !empty(get_config('attendance', 'automark_useempty'))) {
+                    // This is set to null - always available to students until end of session..
+                    return $status->id;
+                }
+                if ($this->sessioninfo[$sessionid]->sessdate + ($status->studentavailability * 60) > $time) {
                     // Found first status we could set.
                     return $status->id;
                 }
@@ -1326,7 +1379,7 @@ class mod_attendance_structure {
 
             if ($this->grade > 0) {
                 $gradeitem = grade_item::fetch(array('courseid' => $this->course->id, 'itemtype' => 'mod',
-                    'itemmodule' => 'attendance', 'iteminstance' => $this->id));
+                    'itemmodule' => 'attendance', 'iteminstance' => $this->id, 'itemnumber' => 0));
                 if ($gradeitem->gradepass > 0 && $gradeitem->grademax != $gradeitem->grademin) {
                     $this->lowgradethreshold = ($gradeitem->gradepass - $gradeitem->grademin) /
                         ($gradeitem->grademax - $gradeitem->grademin);

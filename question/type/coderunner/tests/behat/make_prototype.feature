@@ -17,9 +17,7 @@ Feature: make_prototype
     And the following "question categories" exist:
       | contextlevel | reference | questioncategory | name          |
       | Course       | C1        | Top              | Behat Testing |
-    And I log in as "teacher1"
-    And I am on "Course 1" course homepage
-    And I navigate to "Question bank" in current page administration
+    And I am on the "Course 1" "core_question > course question bank" page logged in as teacher1
     And I press "Create a new question ..."
     And I click on "input#item_qtype_coderunner" "css_element"
     And I press "submitbutton"
@@ -36,7 +34,7 @@ Feature: make_prototype
       print({{TEST.testcode}})
       """
     And I set the field "id_iscombinatortemplate" to "0"
-    And I click on "a[aria-controls='id_advancedcustomisationheader']" "css_element"
+    And I click on "a[aria-controls='id_advancedcustomisationheadercontainer']" "css_element"
     And I set the field "prototypetype" to "Yes (user defined)"
     And I set the field "typename" to "python3_test_prototype"
     And I press "id_submitbutton"
@@ -53,7 +51,7 @@ Feature: make_prototype
 
   Scenario: As a teacher, I get marked right (using per-test-case template) if I submit a correct answer to a CodeRunner question
     When I choose "Preview" action for "Prototype tester" in the question bank
-    And I switch to "questionpreview" window
+    And I click on "a[aria-controls='id_attemptoptionsheadercontainer']" "css_element"
     And I set the field "id_behaviour" to "Adaptive mode"
     And I press "Start again with these options"
     And I set the field with xpath "//textarea[contains(@name, 'answer')]" to "def sqr(n): return n * n"

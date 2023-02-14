@@ -24,8 +24,6 @@
  * @author    Jesus Federico  (jesus [at] blindsidenetworks [dt] com)
  */
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Define all the restore steps that will be used by the restore_url_activity_task.
  *
@@ -40,9 +38,10 @@ class restore_bigbluebuttonbn_activity_structure_step extends restore_activity_s
      * @return array
      */
     protected function define_structure() {
-        $paths = array();
+        $paths = [];
         $paths[] = new restore_path_element('bigbluebuttonbn', '/activity/bigbluebuttonbn');
         $paths[] = new restore_path_element('bigbluebuttonbn_logs', '/activity/bigbluebuttonbn/logs/log');
+        $paths[] = new restore_path_element('bigbluebuttonbn_recordings', '/activity/bigbluebuttonbn/recordings/recording');
         // Return the paths wrapped into standard activity structure.
         return $this->prepare_activity_structure($paths);
     }
@@ -50,10 +49,10 @@ class restore_bigbluebuttonbn_activity_structure_step extends restore_activity_s
     /**
      * Process a bigbluebuttonbn restore.
      *
-     * @param object $data The data in object form
+     * @param array $data The data in object form
      * @return void
      */
-    protected function process_bigbluebuttonbn($data) {
+    protected function process_bigbluebuttonbn(array $data) {
         global $DB;
         $data = (object) $data;
         $data->course = $this->get_courseid();
@@ -67,10 +66,10 @@ class restore_bigbluebuttonbn_activity_structure_step extends restore_activity_s
     /**
      * Process a bigbluebuttonbn_logs restore (additional table).
      *
-     * @param object $data The data in object form
+     * @param array $data The data in object form
      * @return void
      */
-    protected function process_bigbluebuttonbn_logs($data) {
+    protected function process_bigbluebuttonbn_logs(array $data) {
         global $DB;
         $data = (object) $data;
         // Apply modifications.
@@ -85,9 +84,28 @@ class restore_bigbluebuttonbn_activity_structure_step extends restore_activity_s
     }
 
     /**
+     * Process a bigbluebuttonbn_recordings restore (additional table).
+     *
+     * @param array $data The data in object form
+     * @return void
+     */
+    protected function process_bigbluebuttonbn_recordings(array $data) {
+        global $DB;
+        $data = (object) $data;
+        // Apply modifications.
+        $data->courseid = $this->get_mappingid('course', $data->courseid);
+        $data->bigbluebuttonbnid = $this->get_new_parentid('bigbluebuttonbn');
+        $data->timecreated = $this->apply_date_offset($data->timecreated);
+        // Insert the bigbluebuttonbn_recordings record.
+        $newitemid = $DB->insert_record('bigbluebuttonbn_recordings', $data);
+        // Immediately after inserting associated record, call this.
+        $this->set_mapping('bigbluebuttonbn_recordings', $data->id, $newitemid);
+    }
+
+    /**
      * Actions to be executed after the restore is completed
      *
-     * @return array
+     * @return void
      */
     protected function after_execute() {
         // Add bigbluebuttonbn related files, no need to match by itemname (just internally handled context).

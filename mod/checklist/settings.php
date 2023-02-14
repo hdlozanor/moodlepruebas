@@ -17,8 +17,9 @@
 /**
  * Global settings for the checklist
  *
- * @author  2012, Davo Smith <moodle@davosmith.co.uk>
+ * @copyright 2012, Davo Smith <moodle@davosmith.co.uk>
  * @package mod_checklist
+ * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
@@ -33,7 +34,7 @@ if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_configcheckbox('checklist/showupdateablemymoodle',
                                                     get_string('showupdateablemymoodle', 'mod_checklist'),
                                                     get_string('configshowupdateablemymoodle', 'mod_checklist'), 1));
-    
+
     $settings->add(new admin_setting_configcheckbox('mod_checklist/linkcourses',
                                                     get_string('linkcourses', 'mod_checklist'),
                                                     get_string('linkcourses_desc', 'mod_checklist'), 0));
@@ -41,4 +42,7 @@ if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_configcheckbox('mod_checklist/onlyenrolled',
                                                     get_string('onlyenrolled', 'mod_checklist'),
                                                     get_string('onlyenrolleddesc', 'mod_checklist'), 1));
+    $settings->add(new admin_setting_configcheckbox('mod_checklist/showcolorchooser',
+                                                    get_string('showcolorchooser', 'mod_checklist'),
+                                                    get_string('showcolorchooserdesc', 'mod_checklist'), 1));
 }

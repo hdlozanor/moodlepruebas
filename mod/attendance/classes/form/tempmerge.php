@@ -24,8 +24,6 @@
 
 namespace mod_attendance\form;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Temp merge form class.
  *
@@ -43,7 +41,8 @@ class tempmerge extends \moodleform {
         global $COURSE;
 
         $context = \context_course::instance($COURSE->id);
-        $namefields = get_all_user_name_fields(true, 'u');
+        $userfieldsapi = \core_user\fields::for_name();
+        $namefields = $userfieldsapi->get_sql('u', false, '', '', false)->selects;
         $students = get_enrolled_users($context, 'mod/attendance:canbelisted', 0, 'u.id,'.$namefields.',u.email',
                                        'u.lastname, u.firstname', 0, 0, true);
         $partarray = array();
